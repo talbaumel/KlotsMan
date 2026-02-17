@@ -105,6 +105,9 @@ class Game {
     }
     
     setupEventListeners() {
+        const container = document.getElementById('gameContainer');
+        container.focus();
+
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -158,10 +161,14 @@ class Game {
                 } else if (dirMap[dir] && this.state === GAME_STATE.PLAYING) {
                     this.player.setNextDirection(dirMap[dir]);
                 }
+                container.focus();
             };
             btn.addEventListener('touchstart', handler, { passive: false });
             btn.addEventListener('mousedown', handler);
         });
+
+        // Clicking anywhere on the game refocuses for keyboard input
+        container.addEventListener('click', () => container.focus());
     }
     
     start() {
