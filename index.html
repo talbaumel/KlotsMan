@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KlotsMan - Pac-Man Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>KlotsMan</h1>
+            <div class="score-container">
+                <div class="score">Score: <span id="score">0</span></div>
+                <div class="lives">Lives: <span id="lives">3</span></div>
+            </div>
+        </div>
+        
+        <div class="game-status" id="gameStatus">
+            <div class="status-message">Press SPACE to Start</div>
+        </div>
+        
+        <canvas id="gameCanvas" width="560" height="620"></canvas>
+        
+        <div class="controls">
+            <h3>Controls:</h3>
+            <p>Arrow Keys or WASD to move</p>
+            <p>SPACE to start/restart game</p>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
