@@ -1,7 +1,20 @@
 // Game Configuration
-const CELL_SIZE = 20;
+const CELL_SIZE = 28;
 const ROWS = 31;
 const COLS = 28;
+
+// Preload sprite images
+const SPRITES = {};
+function loadSprite(name, src) {
+    const img = new Image();
+    img.src = src;
+    SPRITES[name] = img;
+}
+loadSprite('player_open', 'sprites/player_open.png');
+loadSprite('player_closed', 'sprites/player_closed.png');
+loadSprite('gohst_1', 'sprites/gohst_1.png');
+loadSprite('gohst_2', 'sprites/gohst_2.png');
+loadSprite('gohst_3', 'sprites/gohst_3.png');
 
 // Game States
 const GAME_STATE = {
@@ -34,10 +47,10 @@ class Game {
         this.initMaze();
         this.player = new Player(14, 23);
         this.ghosts = [
-            new Ghost(12, 14, '#FF0000', 'red'),    // Red ghost
-            new Ghost(14, 14, '#FFB8FF', 'pink'),   // Pink ghost
-            new Ghost(13, 15, '#00FFFF', 'cyan'),   // Cyan ghost
-            new Ghost(15, 15, '#FFB852', 'orange')  // Orange ghost
+            new Ghost(12, 14, '#FF0000', 'red', 'gohst_1'),
+            new Ghost(14, 14, '#FFB8FF', 'pink', 'gohst_2'),
+            new Ghost(13, 15, '#00FFFF', 'cyan', 'gohst_3'),
+            new Ghost(15, 15, '#FFB852', 'orange', 'gohst_1')
         ];
         
         this.setupEventListeners();
@@ -99,7 +112,7 @@ class Game {
                     this.start();
                 }
             }
-            
+
             if (this.state === GAME_STATE.PLAYING) {
                 switch(e.code) {
                     case 'ArrowUp':
@@ -124,6 +137,30 @@ class Game {
                         break;
                 }
             }
+        });
+
+        // On-screen D-pad for mobile
+        const dirMap = {
+            up: DIRECTION.UP,
+            down: DIRECTION.DOWN,
+            left: DIRECTION.LEFT,
+            right: DIRECTION.RIGHT
+        };
+
+        document.querySelectorAll('.dpad-btn').forEach(btn => {
+            const handler = (e) => {
+                e.preventDefault();
+                const dir = btn.dataset.dir;
+                if (dir === 'space') {
+                    if (this.state === GAME_STATE.READY || this.state === GAME_STATE.GAME_OVER || this.state === GAME_STATE.WON) {
+                        this.start();
+                    }
+                } else if (dirMap[dir] && this.state === GAME_STATE.PLAYING) {
+                    this.player.setNextDirection(dirMap[dir]);
+                }
+            };
+            btn.addEventListener('touchstart', handler, { passive: false });
+            btn.addEventListener('mousedown', handler);
         });
     }
     
@@ -235,12 +272,12 @@ class Game {
     
     gameOver() {
         this.state = GAME_STATE.GAME_OVER;
-        this.showStatusMessage('Game Over!<br>Press SPACE to Restart');
+        this.showStatusMessage('Game Over!<br>Press SPACE or GO to Restart');
     }
     
     win() {
         this.state = GAME_STATE.WON;
-        this.showStatusMessage('You Win!<br>Press SPACE to Play Again');
+        this.showStatusMessage('You Win!<br>Press SPACE or GO to Play Again');
     }
     
     draw() {
@@ -310,8 +347,8 @@ class Player {
     constructor(x, y) {
         this.startX = x;
         this.startY = y;
-        this.x = x;
-        this.y = y;
+        this.x = x + 0.5;
+        this.y = y + 0.5;
         this.direction = DIRECTION.NONE;
         this.nextDirection = DIRECTION.NONE;
         this.speed = 4;
@@ -321,10 +358,10 @@ class Player {
         this.powerMode = false;
         this.powerModeTime = 0;
     }
-    
+
     reset(x, y) {
-        this.x = x;
-        this.y = y;
+        this.x = x + 0.5;
+        this.y = y + 0.5;
         this.startX = x;
         this.startY = y;
         this.direction = DIRECTION.NONE;
@@ -403,45 +440,53 @@ class Player {
     draw(ctx) {
         const pixelX = this.x * CELL_SIZE;
         const pixelY = this.y * CELL_SIZE;
-        const radius = this.radius * CELL_SIZE;
-        
-        // Determine rotation based on direction
-        let rotation = 0;
-        if (this.direction === DIRECTION.RIGHT) rotation = 0;
-        else if (this.direction === DIRECTION.DOWN) rotation = Math.PI / 2;
-        else if (this.direction === DIRECTION.LEFT) rotation = Math.PI;
-        else if (this.direction === DIRECTION.UP) rotation = -Math.PI / 2;
-        
+        const size = CELL_SIZE * 2;
+
+        // Choose sprite based on mouth animation
+        const sprite = this.mouthAngle > 0.25 ? SPRITES.player_open : SPRITES.player_closed;
+
         ctx.save();
         ctx.translate(pixelX, pixelY);
-        ctx.rotate(rotation);
-        
-        // Draw KlotsMan (custom Pac-Man sprite)
-        ctx.fillStyle = this.powerMode ? '#00FFFF' : '#FFFF00';
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, this.mouthAngle, Math.PI * 2 - this.mouthAngle);
-        ctx.lineTo(0, 0);
-        ctx.fill();
-        
-        // Add eye
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.arc(radius * 0.3, -radius * 0.3, radius * 0.15, 0, Math.PI * 2);
-        ctx.fill();
-        
+
+        // Rotate/flip based on direction (sprite naturally faces left)
+        if (this.direction === DIRECTION.RIGHT) {
+            ctx.scale(-1, 1);
+        } else if (this.direction === DIRECTION.UP) {
+            ctx.rotate(Math.PI / 2);
+        } else if (this.direction === DIRECTION.DOWN) {
+            ctx.rotate(-Math.PI / 2);
+        } else if (this.direction === DIRECTION.NONE) {
+            ctx.scale(-1, 1);
+        }
+
+        if (sprite.complete && sprite.naturalWidth > 0) {
+            ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+        }
+
+        // Power mode glow
+        if (this.powerMode) {
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#00FFFF';
+            ctx.beginPath();
+            ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+
         ctx.restore();
     }
 }
 
 // Ghost Class with custom sprites
 class Ghost {
-    constructor(x, y, color, name) {
+    constructor(x, y, color, name, spriteKey) {
         this.startX = x;
         this.startY = y;
-        this.x = x;
-        this.y = y;
+        this.x = x + 0.5;
+        this.y = y + 0.5;
         this.color = color;
         this.name = name;
+        this.spriteKey = spriteKey;
         this.direction = DIRECTION.NONE;
         this.speed = 3;
         this.radius = 0.4;
@@ -449,10 +494,10 @@ class Ghost {
         this.lastDirectionChange = 0;
         this.directionChangeInterval = 1;
     }
-    
+
     reset(x, y) {
-        this.x = x;
-        this.y = y;
+        this.x = x + 0.5;
+        this.y = y + 0.5;
         this.direction = DIRECTION.NONE;
         this.scared = false;
     }
@@ -553,48 +598,31 @@ class Ghost {
     draw(ctx) {
         const pixelX = this.x * CELL_SIZE;
         const pixelY = this.y * CELL_SIZE;
-        const radius = this.radius * CELL_SIZE;
-        
+        const size = CELL_SIZE * 2;
+        const sprite = SPRITES[this.spriteKey];
+
         ctx.save();
         ctx.translate(pixelX, pixelY);
-        
-        // Draw ghost body (custom sprite)
-        ctx.fillStyle = this.scared ? '#0000FF' : this.color;
-        
-        // Head (circle top)
-        ctx.beginPath();
-        ctx.arc(0, -radius * 0.2, radius, Math.PI, 0);
-        ctx.fill();
-        
-        // Body (rectangle)
-        ctx.fillRect(-radius, -radius * 0.2, radius * 2, radius * 1.2);
-        
-        // Wavy bottom
-        ctx.beginPath();
-        ctx.moveTo(-radius, radius);
-        for (let i = 0; i < 4; i++) {
-            ctx.lineTo(-radius + (i * 0.5 + 0.25) * radius * 2, radius * 0.7);
-            ctx.lineTo(-radius + (i * 0.5 + 0.5) * radius * 2, radius);
+
+        // Flip horizontally when moving left
+        if (this.direction === DIRECTION.LEFT) {
+            ctx.scale(-1, 1);
         }
-        ctx.lineTo(-radius, radius);
-        ctx.fill();
-        
-        // Eyes
-        ctx.fillStyle = '#FFF';
-        ctx.beginPath();
-        ctx.arc(-radius * 0.3, -radius * 0.2, radius * 0.3, 0, Math.PI * 2);
-        ctx.arc(radius * 0.3, -radius * 0.2, radius * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Pupils
-        if (!this.scared) {
-            ctx.fillStyle = '#000';
+
+        if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+            ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+        }
+
+        // Blue tint overlay when scared
+        if (this.scared) {
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = '#0000FF';
             ctx.beginPath();
-            ctx.arc(-radius * 0.3, -radius * 0.2, radius * 0.15, 0, Math.PI * 2);
-            ctx.arc(radius * 0.3, -radius * 0.2, radius * 0.15, 0, Math.PI * 2);
+            ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
             ctx.fill();
+            ctx.globalAlpha = 1;
         }
-        
+
         ctx.restore();
     }
 }

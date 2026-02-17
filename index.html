@@ -3,32 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KlotsMan - Pac-Man Game</title>
+    <title>KlotsMan</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="game-container">
-        <div class="header">
-            <h1>KlotsMan</h1>
-            <div class="score-container">
-                <div class="score">Score: <span id="score">0</span></div>
-                <div class="lives">Lives: <span id="lives">3</span></div>
-            </div>
+        <div class="hud">
+            <span class="title">KlotsMan</span>
+            <span class="stat">Score: <span id="score">0</span></span>
+            <span class="stat">Lives: <span id="lives">3</span></span>
         </div>
-        
+
         <div class="game-status" id="gameStatus">
-            <div class="status-message">Press SPACE to Start</div>
+            <div class="status-message">Press SPACE or GO to Start</div>
         </div>
-        
-        <canvas id="gameCanvas" width="560" height="620"></canvas>
-        
-        <div class="controls">
-            <h3>Controls:</h3>
-            <p>Arrow Keys or WASD to move</p>
-            <p>SPACE to start/restart game</p>
+
+        <canvas id="gameCanvas" width="784" height="868"></canvas>
+
+        <div class="dpad">
+            <button class="dpad-btn dpad-up" data-dir="up" aria-label="Up">&#9650;</button>
+            <div class="dpad-mid">
+                <button class="dpad-btn dpad-left" data-dir="left" aria-label="Left">&#9664;</button>
+                <button class="dpad-btn dpad-center" data-dir="space" aria-label="Start">GO</button>
+                <button class="dpad-btn dpad-right" data-dir="right" aria-label="Right">&#9654;</button>
+            </div>
+            <button class="dpad-btn dpad-down" data-dir="down" aria-label="Down">&#9660;</button>
         </div>
     </div>
-    
+
     <script src="game.js"></script>
 </body>
 </html>

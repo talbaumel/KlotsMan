@@ -6,7 +6,7 @@
 
 body {
     font-family: 'Courier New', monospace;
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    background: #000;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -15,51 +15,39 @@ body {
 }
 
 .game-container {
+    position: relative;
     text-align: center;
-    background: rgba(0, 0, 0, 0.5);
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
-.header {
-    margin-bottom: 20px;
-}
-
-h1 {
-    font-size: 3em;
-    color: #ffff00;
-    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8),
-                 0 0 20px rgba(255, 255, 0, 0.5);
-    margin-bottom: 10px;
-}
-
-.score-container {
+.hud {
     display: flex;
-    justify-content: space-around;
-    font-size: 1.3em;
-    margin: 10px 0;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    margin-bottom: 4px;
+    font-size: 1.1em;
 }
 
-.score, .lives {
-    background: rgba(0, 0, 0, 0.6);
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: 2px solid #ffff00;
+.title {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #ffff00;
+    text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
 }
 
-.score span, .lives span {
+.stat {
+    color: #ccc;
+}
+
+.stat span {
     color: #ffff00;
     font-weight: bold;
 }
 
 #gameCanvas {
     background: #000;
-    border: 4px solid #2a5298;
-    border-radius: 10px;
-    box-shadow: 0 0 30px rgba(42, 82, 152, 0.8);
     display: block;
-    margin: 0 auto;
+    border-radius: 4px;
 }
 
 .game-status {
@@ -73,10 +61,10 @@ h1 {
 
 .status-message {
     background: rgba(0, 0, 0, 0.9);
-    padding: 30px 50px;
-    border-radius: 15px;
-    border: 3px solid #ffff00;
-    font-size: 2em;
+    padding: 24px 40px;
+    border-radius: 10px;
+    border: 2px solid #ffff00;
+    font-size: 1.8em;
     color: #ffff00;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
     animation: pulse 1.5s infinite;
@@ -93,25 +81,49 @@ h1 {
     }
 }
 
-.controls {
-    margin-top: 20px;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 15px;
-    border-radius: 8px;
-    border: 2px solid #2a5298;
-}
-
-.controls h3 {
-    color: #ffff00;
-    margin-bottom: 10px;
-}
-
-.controls p {
-    margin: 5px 0;
-    color: #ccc;
-}
-
-/* Hide status message when not needed */
 .game-status.hidden {
     display: none;
+}
+
+.dpad {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-top: 12px;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.dpad-mid {
+    display: flex;
+    gap: 4px;
+}
+
+.dpad-btn {
+    width: 64px;
+    height: 64px;
+    border: none;
+    border-radius: 12px;
+    background: #222;
+    color: #ffff00;
+    font-size: 1.6em;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.dpad-btn:active {
+    background: #444;
+}
+
+.dpad-center {
+    font-size: 1em;
+    color: #fff;
+    background: #333;
+}
+
+.dpad-center:active {
+    background: #555;
 }
