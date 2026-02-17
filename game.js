@@ -1,7 +1,10 @@
 // Game Configuration
-const CELL_SIZE = 36;
-const ROWS = 31;
-const COLS = 28;
+const CELL_SIZE = 32;
+const ROWS = 93;
+const COLS = 84;
+const SCALE = 3;
+
+const FOOD_EMOJIS = ['🍕', '🍔', '🌮', '🍟', '🍩', '🍪', '🍎', '🍇', '🍓', '🍌', '🍉', '🧁', '🍰', '🥐', '🥨', '🍫', '🥕', '🌽', '🍿', '🥞'];
 
 // Preload sprite images and remove black background
 const SPRITES = {};
@@ -64,23 +67,24 @@ class Game {
         
         // Initialize game elements
         this.initMaze();
-        this.player = new Player(14, 23);
+        this.player = new Player(43, 70);
         this.ghosts = [
-            new Ghost(12, 14, '#FF0000', 'red', 'gohst_1'),
-            new Ghost(14, 14, '#FFB8FF', 'pink', 'gohst_2'),
-            new Ghost(13, 15, '#00FFFF', 'cyan', 'gohst_3'),
-            new Ghost(15, 15, '#FFB852', 'orange', 'gohst_1')
+            new Ghost(37, 43, '#FF0000', 'red', 'gohst_1'),
+            new Ghost(43, 43, '#FFB8FF', 'pink', 'gohst_2'),
+            new Ghost(40, 46, '#00FFFF', 'cyan', 'gohst_3'),
+            new Ghost(46, 46, '#FFB852', 'orange', 'gohst_1')
         ];
         
         this.setupEventListeners();
         this.lastTime = 0;
         this.updateUI();
         this.draw();
+        this.scrollToPlayer();
     }
     
     initMaze() {
-        // 1 = wall, 0 = empty, 2 = dot, 3 = power pellet
-        this.maze = [
+        // Base 28x31 maze: 1 = wall, 0 = empty, 2 = dot, 3 = power pellet
+        const baseMaze = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
             [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],
             [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
@@ -114,11 +118,37 @@ class Game {
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
         
+        // Scale up maze so corridors are SCALE cells wide (matching sprite size)
+        this.maze = [];
+        for (let row = 0; row < baseMaze.length; row++) {
+            for (let sy = 0; sy < SCALE; sy++) {
+                const newRow = [];
+                for (let col = 0; col < baseMaze[row].length; col++) {
+                    const cell = baseMaze[row][col];
+                    for (let sx = 0; sx < SCALE; sx++) {
+                        if ((cell === 2 || cell === 3) && (sy !== 1 || sx !== 1)) {
+                            newRow.push(0);
+                        } else {
+                            newRow.push(cell);
+                        }
+                    }
+                }
+                this.maze.push(newRow);
+            }
+        }
+        
         this.totalDots = 0;
         this.dotsEaten = 0;
-        for (let row of this.maze) {
-            for (let cell of row) {
-                if (cell === 2 || cell === 3) this.totalDots++;
+        this.dotEmojis = {};
+        for (let row = 0; row < this.maze.length; row++) {
+            for (let col = 0; col < this.maze[row].length; col++) {
+                const cell = this.maze[row][col];
+                if (cell === 2) {
+                    this.dotEmojis[row + ',' + col] = FOOD_EMOJIS[Math.floor(Math.random() * FOOD_EMOJIS.length)];
+                    this.totalDots++;
+                } else if (cell === 3) {
+                    this.totalDots++;
+                }
             }
         }
     }
@@ -196,9 +226,9 @@ class Game {
         this.lives = 3;
         this.dotsEaten = 0;
         this.initMaze();
-        this.player.reset(14, 23);
+        this.player.reset(43, 70);
         this.ghosts.forEach((ghost, i) => {
-            const positions = [{x: 12, y: 14}, {x: 14, y: 14}, {x: 13, y: 15}, {x: 15, y: 15}];
+            const positions = [{x: 37, y: 43}, {x: 43, y: 43}, {x: 40, y: 46}, {x: 46, y: 46}];
             ghost.reset(positions[i].x, positions[i].y);
         });
         this.updateUI();
@@ -215,6 +245,7 @@ class Game {
         
         this.update(deltaTime);
         this.draw();
+        this.scrollToPlayer();
         
         requestAnimationFrame((time) => this.gameLoop(time));
     }
@@ -223,22 +254,28 @@ class Game {
         // Update player
         this.player.update(deltaTime, this.maze);
         
-        // Check dot collection
-        const playerCell = this.maze[Math.floor(this.player.y)][Math.floor(this.player.x)];
-        if (playerCell === 2) {
-            this.maze[Math.floor(this.player.y)][Math.floor(this.player.x)] = 0;
-            this.score += 10;
-            this.dotsEaten++;
-            this.updateUI();
-        } else if (playerCell === 3) {
-            this.maze[Math.floor(this.player.y)][Math.floor(this.player.x)] = 0;
-            this.score += 50;
-            this.dotsEaten++;
-            this.player.powerMode = true;
-            this.player.powerModeTime = 10;
-            this.ghosts.forEach(ghost => ghost.scared = true);
-            this.updateUI();
+        // Check dot collection in nearby cells (dots are spaced SCALE cells apart)
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                const checkRow = Math.floor(this.player.y) + dy;
+                const checkCol = Math.floor(this.player.x) + dx;
+                if (checkRow < 0 || checkRow >= ROWS || checkCol < 0 || checkCol >= COLS) continue;
+                const cell = this.maze[checkRow][checkCol];
+                if (cell === 2) {
+                    this.maze[checkRow][checkCol] = 0;
+                    this.score += 10;
+                    this.dotsEaten++;
+                } else if (cell === 3) {
+                    this.maze[checkRow][checkCol] = 0;
+                    this.score += 50;
+                    this.dotsEaten++;
+                    this.player.powerMode = true;
+                    this.player.powerModeTime = 10;
+                    this.ghosts.forEach(ghost => ghost.scared = true);
+                }
+            }
         }
+        this.updateUI();
         
         // Update power mode timer
         if (this.player.powerMode) {
@@ -258,7 +295,7 @@ class Game {
                 if (this.player.powerMode && ghost.scared) {
                     // Eat ghost
                     this.score += 200;
-                    ghost.reset(14, 14);
+                    ghost.reset(43, 43);
                     this.updateUI();
                 } else if (!ghost.scared) {
                     // Player dies
@@ -284,13 +321,13 @@ class Game {
             Math.pow(entity1.x - entity2.x, 2) + 
             Math.pow(entity1.y - entity2.y, 2)
         );
-        return distance < 0.6;
+        return distance < 1.8;
     }
     
     resetPositions() {
-        this.player.reset(14, 23);
+        this.player.reset(43, 70);
         this.ghosts.forEach((ghost, i) => {
-            const positions = [{x: 12, y: 14}, {x: 14, y: 14}, {x: 13, y: 15}, {x: 15, y: 15}];
+            const positions = [{x: 37, y: 43}, {x: 43, y: 43}, {x: 40, y: 46}, {x: 46, y: 46}];
             ghost.reset(positions[i].x, positions[i].y);
         });
         this.state = GAME_STATE.PLAYING;
@@ -321,6 +358,15 @@ class Game {
         this.player.draw(this.ctx);
     }
     
+    scrollToPlayer() {
+        const pixelX = this.player.x * CELL_SIZE;
+        const pixelY = this.player.y * CELL_SIZE;
+        window.scrollTo({
+            left: pixelX - window.innerWidth / 2,
+            top: pixelY - window.innerHeight / 2
+        });
+    }
+    
     drawMaze() {
         for (let row = 0; row < ROWS; row++) {
             for (let col = 0; col < COLS; col++) {
@@ -336,17 +382,20 @@ class Game {
                     this.ctx.lineWidth = 1;
                     this.ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
                 } else if (cell === 2) {
-                    // Dot
-                    this.ctx.fillStyle = '#FFB897';
-                    this.ctx.beginPath();
-                    this.ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 2, 0, Math.PI * 2);
-                    this.ctx.fill();
+                    // Food emoji
+                    const emoji = this.dotEmojis[row + ',' + col];
+                    if (emoji) {
+                        this.ctx.font = (CELL_SIZE * 2) + 'px serif';
+                        this.ctx.textAlign = 'center';
+                        this.ctx.textBaseline = 'middle';
+                        this.ctx.fillText(emoji, x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+                    }
                 } else if (cell === 3) {
-                    // Power pellet
-                    this.ctx.fillStyle = '#FFB897';
-                    this.ctx.beginPath();
-                    this.ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 5, 0, Math.PI * 2);
-                    this.ctx.fill();
+                    // Power pellet - computer emoji
+                    this.ctx.font = (CELL_SIZE * 2.5) + 'px serif';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText('💻', x + CELL_SIZE / 2, y + CELL_SIZE / 2);
                 }
             }
         }
@@ -377,8 +426,8 @@ class Player {
         this.y = y + 0.5;
         this.direction = DIRECTION.NONE;
         this.nextDirection = DIRECTION.NONE;
-        this.speed = 4;
-        this.radius = 0.4;
+        this.speed = 12;
+        this.radius = 1.2;
         this.mouthAngle = 0;
         this.mouthDirection = 1;
         this.powerMode = false;
@@ -450,8 +499,8 @@ class Player {
             const row = Math.floor(corner.y);
             
             if (row < 0 || row >= ROWS || col < 0 || col >= COLS) {
-                // Allow wrapping in tunnels (row 14)
-                if (row === 14 || row === 13 || row === 15) continue;
+                // Allow wrapping in tunnels
+                if (row >= 39 && row <= 47) continue;
                 return false;
             }
             
@@ -514,8 +563,8 @@ class Ghost {
         this.name = name;
         this.spriteKey = spriteKey;
         this.direction = DIRECTION.NONE;
-        this.speed = 3;
-        this.radius = 0.4;
+        this.speed = 9;
+        this.radius = 1.2;
         this.scared = false;
         this.lastDirectionChange = 0;
         this.directionChangeInterval = 1;
@@ -559,8 +608,8 @@ class Ghost {
         const validDirections = [];
         
         for (let dir of possibleDirections) {
-            const nextX = this.x + dir.x * 0.5;
-            const nextY = this.y + dir.y * 0.5;
+            const nextX = this.x + dir.x * 1.5;
+            const nextY = this.y + dir.y * 1.5;
             
             if (this.canMove(nextX, nextY, maze)) {
                 validDirections.push(dir);
@@ -609,7 +658,7 @@ class Ghost {
             const row = Math.floor(corner.y);
             
             if (row < 0 || row >= ROWS || col < 0 || col >= COLS) {
-                if (row === 14 || row === 13 || row === 15) continue;
+                if (row >= 39 && row <= 47) continue;
                 return false;
             }
             
