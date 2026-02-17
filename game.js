@@ -1,14 +1,33 @@
 // Game Configuration
-const CELL_SIZE = 28;
+const CELL_SIZE = 36;
 const ROWS = 31;
 const COLS = 28;
 
-// Preload sprite images
+// Preload sprite images and remove black background
 const SPRITES = {};
 function loadSprite(name, src) {
     const img = new Image();
     img.src = src;
-    SPRITES[name] = img;
+    img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        try {
+            const data = ctx.getImageData(0, 0, c.width, c.height);
+            const px = data.data;
+            for (let i = 0; i < px.length; i += 4) {
+                if (px[i] < 10 && px[i + 1] < 10 && px[i + 2] < 10) {
+                    px[i + 3] = 0;
+                }
+            }
+            ctx.putImageData(data, 0, 0);
+        } catch (e) {
+            // CORS fallback - use image as-is
+        }
+        SPRITES[name] = c;
+    };
 }
 loadSprite('player_open', './sprites/player_open.png');
 loadSprite('player_closed', './sprites/player_closed.png');
@@ -408,7 +427,7 @@ class Player {
         if (this.x >= COLS) this.x = 0;
         
         // Animate mouth
-        this.mouthAngle += this.mouthDirection * deltaTime * 8;
+        this.mouthAngle += this.mouthDirection * deltaTime * 3;
         if (this.mouthAngle > 0.5) {
             this.mouthAngle = 0.5;
             this.mouthDirection = -1;
@@ -447,7 +466,7 @@ class Player {
     draw(ctx) {
         const pixelX = this.x * CELL_SIZE;
         const pixelY = this.y * CELL_SIZE;
-        const size = CELL_SIZE * 2;
+        const size = CELL_SIZE * 3;
 
         // Choose sprite based on mouth animation
         const sprite = this.mouthAngle > 0.25 ? SPRITES.player_open : SPRITES.player_closed;
@@ -466,7 +485,7 @@ class Player {
             ctx.scale(-1, 1);
         }
 
-        if (sprite.complete && sprite.naturalWidth > 0) {
+        if (sprite) {
             ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
         }
 
@@ -605,7 +624,7 @@ class Ghost {
     draw(ctx) {
         const pixelX = this.x * CELL_SIZE;
         const pixelY = this.y * CELL_SIZE;
-        const size = CELL_SIZE * 2;
+        const size = CELL_SIZE * 3;
         const sprite = SPRITES[this.spriteKey];
 
         ctx.save();
@@ -616,7 +635,7 @@ class Ghost {
             ctx.scale(-1, 1);
         }
 
-        if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+        if (sprite) {
             ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
         }
 
