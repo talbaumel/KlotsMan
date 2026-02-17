@@ -37,6 +37,7 @@ loadSprite('player_closed', './sprites/player_closed.png');
 loadSprite('gohst_1', './sprites/gohst_1.png');
 loadSprite('gohst_2', './sprites/gohst_2.png');
 loadSprite('gohst_3', './sprites/gohst_3.png');
+loadSprite('dead', './sprites/dead.png');
 
 // Game States
 const GAME_STATE = {
@@ -44,7 +45,8 @@ const GAME_STATE = {
     PLAYING: 'playing',
     PAUSED: 'paused',
     GAME_OVER: 'game_over',
-    WON: 'won'
+    WON: 'won',
+    DYING: 'dying'
 };
 
 // Directions
@@ -238,10 +240,26 @@ class Game {
     }
     
     gameLoop(currentTime = 0) {
-        if (this.state !== GAME_STATE.PLAYING) return;
+        if (this.state !== GAME_STATE.PLAYING && this.state !== GAME_STATE.DYING) return;
         
         const deltaTime = (currentTime - this.lastTime) / 1000;
         this.lastTime = currentTime;
+        
+        if (this.state === GAME_STATE.DYING) {
+            this.deathTimer -= deltaTime;
+            if (this.deathTimer <= 0) {
+                this.player.dead = false;
+                if (this.lives <= 0) {
+                    this.gameOver();
+                } else {
+                    this.resetPositions();
+                }
+            }
+            this.draw();
+            this.scrollToPlayer();
+            requestAnimationFrame((time) => this.gameLoop(time));
+            return;
+        }
         
         this.update(deltaTime);
         this.draw();
@@ -301,11 +319,11 @@ class Game {
                     // Player dies
                     this.lives--;
                     this.updateUI();
-                    if (this.lives <= 0) {
-                        this.gameOver();
-                    } else {
-                        this.resetPositions();
-                    }
+                    this.state = GAME_STATE.DYING;
+                    this.player.dead = true;
+                    this.deathTimer = 1.5;
+                    this.draw();
+                    return;
                 }
             }
         });
@@ -432,6 +450,7 @@ class Player {
         this.mouthDirection = 1;
         this.powerMode = false;
         this.powerModeTime = 0;
+        this.dead = false;
     }
 
     reset(x, y) {
@@ -443,6 +462,7 @@ class Player {
         this.nextDirection = DIRECTION.NONE;
         this.powerMode = false;
         this.powerModeTime = 0;
+        this.dead = false;
     }
     
     setNextDirection(dir) {
@@ -517,8 +537,8 @@ class Player {
         const pixelY = this.y * CELL_SIZE;
         const size = CELL_SIZE * 3;
 
-        // Choose sprite based on mouth animation
-        const sprite = this.mouthAngle > 0.25 ? SPRITES.player_open : SPRITES.player_closed;
+        // Choose sprite based on mouth animation or death
+        const sprite = this.dead ? SPRITES.dead : (this.mouthAngle > 0.25 ? SPRITES.player_open : SPRITES.player_closed);
 
         ctx.save();
         ctx.translate(pixelX, pixelY);
