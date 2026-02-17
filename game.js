@@ -10,11 +10,11 @@ function loadSprite(name, src) {
     img.src = src;
     SPRITES[name] = img;
 }
-loadSprite('player_open', 'sprites/player_open.png');
-loadSprite('player_closed', 'sprites/player_closed.png');
-loadSprite('gohst_1', 'sprites/gohst_1.png');
-loadSprite('gohst_2', 'sprites/gohst_2.png');
-loadSprite('gohst_3', 'sprites/gohst_3.png');
+loadSprite('player_open', './sprites/player_open.png');
+loadSprite('player_closed', './sprites/player_closed.png');
+loadSprite('gohst_1', './sprites/gohst_1.png');
+loadSprite('gohst_2', './sprites/gohst_2.png');
+loadSprite('gohst_3', './sprites/gohst_3.png');
 
 // Game States
 const GAME_STATE = {
